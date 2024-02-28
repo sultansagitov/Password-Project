@@ -1,36 +1,56 @@
-﻿using Microsoft.VisualBasic.Logging;
+﻿using MaterialSkin;
+using MaterialSkin.Controls;
 using System.Diagnostics;
-using System.IO;
 
 namespace Password_Project
 {
-    public partial class Form1 : Form
+    public partial class Form1 : MaterialForm
     {
-        List<Control> password_list = new();
+        readonly MaterialSkinManager materialSkinManager;
+        readonly List<Control> password_list = [];
+        readonly Random rnd = new();
 
         private const string UPPERS = "QWERTYUIPASDFGHJKLZXCVBNM";
         private const string LOWERS = "qwertyuipasdfghjklzxcvbnm";
         private const string NUMBERS = "123456789";
         private const string SYMBOLS = "!@#$%^&*_+-=";
 
-        public static string app_folder = Environment.ExpandEnvironmentVariables("%APPDATA%\\Result\\Password-Generator\\");
+        public static string app_folder =
+            Environment.ExpandEnvironmentVariables("%APPDATA%/Result/Password-Generator/");
         public static string passwordPath = app_folder + "passwords.txt";
         public static string logPath = app_folder + "log.txt";
 
         public Form1()
         {
             InitializeComponent();
+
+            materialSkinManager = MaterialSkinManager.Instance;
+            materialSkinManager.AddFormToManage(this);
+            materialSkinManager.Theme = MaterialSkinManager.Themes.DARK;
+            materialSkinManager.ColorScheme = new ColorScheme(
+                Primary.Red900,
+                Primary.Red900,
+                Primary.Red100,
+                Accent.Red200,
+                TextShade.WHITE
+            );
         }
         private void Form1_Load(object sender, EventArgs e)
         {
-            MinimumSize = MaximumSize = Size = new(438, 490);
+            MinimumSize = MaximumSize = Size;
             //if (Environment.OSVersion.Version.Build < 22000)
 
-            if (!File.Exists(passwordPath))
-                File.Create(passwordPath);
+            if (!Directory.Exists(app_folder))
+                Directory.CreateDirectory(app_folder);
 
+            if (!File.Exists(passwordPath))
+            {
+                using FileStream sw = File.Create(passwordPath);
+            }
             if (!File.Exists(logPath))
-                File.Create(logPath);
+            {
+                using FileStream sw = File.Create(logPath);
+            }
         }
 
         private void generate_btn_Click(object sender, EventArgs e)
@@ -75,8 +95,6 @@ namespace Password_Project
             }
             else
             {
-                Random rnd = new();
-
                 for (int i = 0; i < count_num.Value; i++)
                 {
                     string password = "";
@@ -84,32 +102,37 @@ namespace Password_Project
                     for (int j = 0; j < length_num.Value; j++)
                         password += chars[rnd.Next(chars.Length)];
 
-                    Button copybtn = new()
+                    Point startPosition = new(12, 329);
+
+                    MaterialButton copybtn = new()
                     {
                         Text = "Скопировать",
                         TabIndex = 10 + i,
-                        Location = new(12, 186 + i * 29)
+                        Location = new(startPosition.X, startPosition.Y + i * 48)
                     };
 
                     copybtn.Size = new(106, copybtn.Size.Height);
 
-                    EventArgs eventArgs = new EventArgs();
+                    EventArgs eventArgs = new();
 
                     void copybtn_Click(object sender, EventArgs e)
                     {
                         Clipboard.SetText(password);
 
                         DateTime dt = DateTime.Now;
-                        File.AppendAllText(passwordPath, $"[{DateTime.Now.ToString("HH:mm:ss dd/MMM/YYYY")}] {password}\n");
+                        using StreamWriter writer = File.AppendText(passwordPath);
+                        writer.WriteLine($"[{DateTime.Now:HH:mm:ss dd-MMMM-yyyy}] {password}");
                     }
 
                     copybtn.Click += new EventHandler(copybtn_Click);
 
-                    Label passwd = new()
+                    MaterialLabel passwd = new()
                     {
                         Text = password,
-                        Location = new(124, 189 + i * 29)
+                        Location = new(startPosition.X + 136, startPosition.Y + 10 + i * 48),
+                        AutoSize = true
                     };
+
 
                     password_list.Add(copybtn);
                     password_list.Add(passwd);
@@ -150,7 +173,20 @@ namespace Password_Project
 
         private void file_btn_Click(object sender, EventArgs e)
         {
-            Process.Start("notepad", app_folder + "passwords.txt");
+            if (File.Exists(passwordPath))
+                Process.Start("notepad", passwordPath);
+            else
+            {
+                MessageBox.Show($"Файл {passwordPath} не найден, Попробуйте перезапустить приложение", "Файл не найден", MessageBoxButtons.OKCancel, MessageBoxIcon.Error);
+            }
+        }
+
+        private void theme_changer_Click(object sender, EventArgs e)
+        {
+            if (materialSkinManager.Theme == MaterialSkinManager.Themes.DARK)
+                materialSkinManager.Theme = MaterialSkinManager.Themes.LIGHT;
+            else
+                materialSkinManager.Theme = MaterialSkinManager.Themes.DARK;
         }
     }
 }
